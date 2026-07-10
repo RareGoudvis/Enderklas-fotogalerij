@@ -9,13 +9,15 @@ export interface Preset {
 }
 
 export const PRESETS: Record<PresetName, Preset> = {
-  hoog: { maxDim: 2560, quality: 0.85 }, // ~1,0 MB — standaard, niet te onderscheiden op scherm & 10×15-print
-  normaal: { maxDim: 2048, quality: 0.8 }, // ~600 KB
-  zuinig: { maxDim: 1600, quality: 0.75 }, // ~350 KB — WhatsApp-niveau, nog steeds prima
+  hoog: { maxDim: 3200, quality: 0.9 }, // ~2,0–2,5 MB — standaard, kwaliteit primeert (ruime headroom)
+  normaal: { maxDim: 2560, quality: 0.85 }, // ~1,2 MB — lichte degradatie vlak bij de cap
+  zuinig: { maxDim: 2048, quality: 0.8 }, // ~0,7 MB — laatste stap net onder de cap
 };
 
-// Auto-degradatiepunten op basis van bucketgebruik (GB).
-export const THRESHOLDS_GB = { normaal: 6, zuinig: 8.5 };
+// Auto-degradatiepunten op basis van bucketgebruik (GB). Bewust hoog gezet: bij
+// ~800 foto's/jaar tegen een 9,8 GB-cap is de headroom enorm, dus degradatie
+// start pas vlak bij de cap.
+export const THRESHOLDS_GB = { normaal: 8, zuinig: 9.3 };
 
 // Thumbnail-parameters (tweede pass).
 export const THUMB = { maxDim: 400, quality: 0.72 };
