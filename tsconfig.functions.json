@@ -18,5 +18,10 @@
 
     "noEmit": true
   },
-  "include": ["functions", "src/config/classes.ts", "src/config/compression.ts"]
+  "include": [
+    "functions",
+    "src/config/classes.ts",
+    "src/config/compression.ts",
+    "src/config/constants.ts"
+  ]
 }
