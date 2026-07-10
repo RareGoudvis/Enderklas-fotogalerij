@@ -29,3 +29,22 @@ Rooktest: `GET http://127.0.0.1:8788/api/health` moet een JSON teruggeven met
 >   --local --persist-to .wrangler/state --file teachers.json
 > ```
 
+## Productie-opzetten
+
+Volledige stap-voor-stap in `docs/R2-setup.md` §2. Kort:
+
+1. **R2-bucket** `basl-fotogalerij` aanmaken met **jurisdiction EU** (GDPR).
+2. **Pages-project** aan de GitHub-repo koppelen — build `npm run build`, output `dist`.
+3. **R2-binding** `BUCKET` → de bucket toevoegen (Settings → Functions).
+4. **Env-vars** (encrypted) zetten: zie `.dev.vars.example` + `SESSION_SECRET`/`SHARE_SECRET`
+   (`openssl rand -hex 32`).
+5. **Custom domain** `foto.enderklas.be` koppelen (eigen Cloudflare-zone, self-service CNAME).
+6. Eerst je **eigen adminwachtwoord** zetten in het beheerpaneel, daarna de leerkrachten.
+
+## Functionaliteit (v1, alle sprints)
+
+Leerkracht-login (wachtwoord, PBKDF2 + lockout) · multi-class albums met gedeelde manifests ·
+korte HMAC-sharelinks + client-side QR · browsercompressie (WebP, HEIC-fallback) + upload met
+opslag-cap · ouderweergave met retentiebanner, lightbox, losse + zip-download · beheerpaneel
+(albums, leerkrachten, beheerders, opslag, export, jaarlijkse wipe).
+
