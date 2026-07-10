@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { SchoolHeader } from '../components/SchoolHeader';
@@ -16,20 +16,23 @@ export default function Landing() {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
-  // Al aangemeld? Meteen doorsturen naar de juiste view.
-  if (user) {
-    navigate(user.role === 'admin' ? '/beheer' : '/uploaden', { replace: true });
+  // Bestemming volgens rol: admin → beheer, contributor → uploaden.
+  function destFor(role: 'admin' | 'contributor'): string {
+    return role === 'admin' ? '/beheer' : '/uploaden';
   }
+
+  // Al aangemeld (bv. terugkerend bezoek aan /)? Meteen doorsturen.
+  useEffect(() => {
+    if (user) navigate(destFor(user.role), { replace: true });
+  }, [user, navigate]);
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     setErr(null);
     setBusy(true);
     try {
-      await login(username, password);
-      // Rol bepaalt de bestemming; navigate gebeurt via de user-check hierboven
-      // bij de volgende render, maar we sturen expliciet voor snelheid.
-      navigate('/uploaden', { replace: true });
+      const me = await login(username, password);
+      navigate(destFor(me.role), { replace: true }); // rol bepaalt de bestemming
     } catch (e2) {
       setErr(e2 instanceof ApiError ? e2.message : 'Aanmelden mislukt. Probeer opnieuw.');
     } finally {
