@@ -1,0 +1,8 @@
+# Normaliseer regeleindes: LF in de repo, ongeacht het OS van de committer.
+* text=auto eol=lf
+
+# Binaire bestanden nooit als tekst behandelen.
+*.png binary
+*.jpg binary
+*.webp binary
+*.ico binary

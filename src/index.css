@@ -1,0 +1,20 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Poppins — v1 gebruikt de system-fallback uit tailwind.config.js tot een
+   lokale webfont wordt toegevoegd. Geen externe font-CDN (geen tracking). */
+
+:root {
+  color-scheme: light;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  @apply bg-white text-ink font-sans antialiased;
+}

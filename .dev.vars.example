@@ -1,0 +1,6 @@
+STORAGE_BACKEND=r2
+AUTH_MODE=password
+BOOTSTRAP_ADMIN_EMAIL=ruben@broeders.be
+SESSION_SECRET=change-me-openssl-rand-hex-32
+SHARE_SECRET=change-me-openssl-rand-hex-32
+STORAGE_HARD_CAP_GB=9.8

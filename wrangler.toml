@@ -1,0 +1,20 @@
+# Cloudflare Pages configuratie voor BASL-Fotogalerij.
+# De frontend wordt naar dist/ gebouwd; /functions bevat de Pages Functions (API).
+name = "basl-fotogalerij"
+pages_build_output_dir = "dist"
+compatibility_date = "2024-11-27"
+compatibility_flags = ["nodejs_compat"]
+
+# R2-bucket-binding. De Functions lezen/schrijven de bucket rechtstreeks via `env.BUCKET`
+# — geen S3-sleutels, geen pre-signed URLs.
+#
+# jurisdiction = "eu" is een HARDE garantie dat data-at-rest de EU nooit verlaat
+# (GDPR-vereiste voor foto's van minderjarigen, R2-setup.md §2). De bucket zelf moet
+# met dezelfde jurisdiction aangemaakt zijn:
+#   wrangler r2 bucket create basl-fotogalerij --jurisdiction eu
+[[r2_buckets]]
+binding = "BUCKET"
+bucket_name = "basl-fotogalerij"
+jurisdiction = "eu"
+# Lokale dev gebruikt een aparte, gesimuleerde bucket (Miniflare) — raakt productie niet.
+preview_bucket_name = "basl-fotogalerij-preview"
