@@ -88,8 +88,12 @@ na *"Alle wachtwoorden wissen"* — jouw hash blijft daar bewust behouden).
 
 ## C. Go-live checklist (na de eerste deploy, in deze volgorde)
 
-1. **Infra:** `GET https://foto.enderklas.be/api/health` → `{"backend":"r2", etag, conditionalWriteOk:true}`.
-   Bewijst binding + EU-bucket + conditionele-write-pad in productie.
+1. **Infra:**
+   - `GET https://foto.enderklas.be/api/health` → `{"ok":true,"backend":"r2",…}` (goedkope liveness,
+     geen R2 — veilig voor bots/uptime-monitors).
+   - Diepe R2-rooktest: log in als admin, ga dan naar `…/api/health?deep=1` → `{…"conditionalWriteOk":true}`.
+     Bewijst binding + EU-bucket + conditionele-write-pad. (Een succesvolle login bewijst sowieso al dat
+     R2-reads werken; een upload bewijst de writes.)
 2. **Bucket privé:** een R2-object rechtstreeks (public/S3-URL) openen moet falen; enkel
    `/api/img/…?tok=` mag serveren.
 3. **Auth:** login als bootstrap-admin; `GET /api/me` → `role:"admin"`. Fout wachtwoord 5× → 429.

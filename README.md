@@ -19,8 +19,10 @@ npm run build                    # bouwt de frontend naar dist/
 npx wrangler pages dev           # frontend + Functions + lokale R2-simulator
 ```
 
-Rooktest: `GET http://127.0.0.1:8788/api/health` moet een JSON teruggeven met
-`"backend":"r2"` en een `etag` — dat bewijst de R2-round-trip en het conditionele-write-pad.
+Rooktest: `GET http://127.0.0.1:8788/api/health` geeft goedkope liveness
+(`{"ok":true,"backend":"r2"}`, geen R2-operatie). De volledige R2-round-trip
+(`etag` + `conditionalWriteOk`) draai je met `?deep=1` terwijl je als admin
+aangemeld bent — bewust afgeschermd zodat anonieme/bot-hits geen storage-operaties kosten.
 
 > **Let op (lokale dev):** `wrangler pages dev` gebruikt de **preview**-bucket
 > (`preview_bucket_name` uit `wrangler.toml`). Seed configbestanden dus daarheen, bv.:
