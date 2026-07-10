@@ -48,26 +48,45 @@ export async function readManifest(
   return { albums: Array.isArray(data.albums) ? data.albums : [], etag: res.etag };
 }
 
+interface MutateOptions {
+  /** Aantal pogingen (default 2 = retry-once, brief §5). */
+  attempts?: number;
+  /** Voeg willekeurige backoff toe tussen pogingen (shared-album hot path). */
+  jitter?: boolean;
+}
+
 /**
- * Muteer een klas-manifest ETag-veilig met retry-once (brief §5). De callback
- * krijgt de huidige albumlijst en geeft de nieuwe terug.
+ * Muteer een klas-manifest ETag-veilig. Default is retry-once (brief §5 —
+ * album create/delete). De registratie-hot-path (gedeelde albums, meerdere
+ * leerkrachten tegelijk) gebruikt meer pogingen + jitter tot de write landt;
+ * de merge convergeert altijd (max-timestamp, version++).
  */
 export async function mutateManifest(
   storage: StorageAdapter,
   classId: string,
   fn: (albums: Album[]) => Album[],
+  opts: MutateOptions = {},
 ): Promise<void> {
-  for (let attempt = 0; attempt < 2; attempt++) {
+  const attempts = opts.attempts ?? 2;
+  for (let attempt = 0; attempt < attempts; attempt++) {
     const { albums, etag } = await readManifest(storage, classId);
     const next: ManifestFile = { albums: fn(albums) };
     try {
       await storage.writeJson(manifestPath(classId), next, etag);
       return;
     } catch (e) {
-      if (e instanceof ConflictError && attempt === 0) continue; // her-lees en retry
+      const last = attempt === attempts - 1;
+      if (e instanceof ConflictError && !last) {
+        if (opts.jitter) await sleep(50 + Math.floor(Math.random() * 150));
+        continue; // her-lees en probeer opnieuw
+      }
       throw e;
     }
   }
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((r) => setTimeout(r, ms));
 }
 
 /**

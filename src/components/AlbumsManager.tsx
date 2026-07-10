@@ -8,6 +8,7 @@ import { deleteAlbum, listAlbums } from '../lib/albums';
 import { ApiError } from '../lib/api';
 import { CreateAlbumWizard } from './CreateAlbumWizard';
 import { ShareModal } from './ShareModal';
+import { UploadZone } from './UploadZone';
 
 interface AlbumsManagerProps {
   classId: string;
@@ -23,6 +24,7 @@ export function AlbumsManager({ classId }: AlbumsManagerProps) {
   const [err, setErr] = useState<string | null>(null);
   const [wizardOpen, setWizardOpen] = useState(false);
   const [shareTarget, setShareTarget] = useState<Album | null>(null);
+  const [uploadTarget, setUploadTarget] = useState<Album | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -91,6 +93,12 @@ export function AlbumsManager({ classId }: AlbumsManagerProps) {
               </div>
               <div className="flex shrink-0 gap-2">
                 <button
+                  onClick={() => setUploadTarget(album)}
+                  className="min-h-touch rounded-lg bg-accent px-3 py-1.5 text-sm font-medium text-accent-fg"
+                >
+                  Upload
+                </button>
+                <button
                   onClick={() => setShareTarget(album)}
                   className="min-h-touch rounded-lg border border-black/15 px-3 py-1.5 text-sm font-medium"
                 >
@@ -123,6 +131,15 @@ export function AlbumsManager({ classId }: AlbumsManagerProps) {
           album={shareTarget}
           token={shareTarget.token}
           onTokenChange={(t) => onTokenChange(shareTarget.id, t)}
+        />
+      ) : null}
+
+      {uploadTarget ? (
+        <UploadZone
+          open={true}
+          onClose={() => setUploadTarget(null)}
+          album={uploadTarget}
+          onUploaded={() => void load()}
         />
       ) : null}
     </div>

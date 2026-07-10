@@ -12,6 +12,7 @@ dist/
 # (src/config/ is wél broncode en blijft getrackt.)
 /config/
 /manifests/
+/albums/
 
 # local secrets — NEVER commit
 .dev.vars

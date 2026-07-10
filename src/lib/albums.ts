@@ -1,7 +1,8 @@
 // Album-API-client + gedeelde types (frontend).
 
 import { RETENTION_NOTICE } from '../config/constants';
-import { api } from './api';
+import type { PresetName } from '../config/compression';
+import { ApiError, api } from './api';
 
 export interface Album {
   id: string;
@@ -37,6 +38,62 @@ export function deleteAlbum(albumId: string): Promise<{ ok: true }> {
 
 export function revokeAlbum(albumId: string): Promise<{ ok: true; token: string }> {
   return api.post(`/api/albums/${albumId}/revoke`);
+}
+
+export interface StorageStatus {
+  usedBytes: number;
+  usedGb: number;
+  preset: PresetName;
+  pinned: PresetName | null;
+  capGb: number;
+  capReached: boolean;
+}
+
+export function getStorageStatus(): Promise<StorageStatus> {
+  return api.get('/api/storage-status');
+}
+
+/**
+ * Upload één gecomprimeerd bestand (main + thumb) via multipart POST.
+ * Gebruikt XHR i.p.v. fetch om echte upload-voortgang per bestand te melden
+ * (fetch heeft geen upload-progress-event).
+ */
+export function uploadPhoto(
+  albumId: string,
+  main: Blob,
+  thumb: Blob,
+  onProgress?: (fraction: number) => void,
+): Promise<{ id: string }> {
+  return new Promise((resolve, reject) => {
+    const fd = new FormData();
+    fd.append('main', main, 'main.webp');
+    fd.append('thumb', thumb, 'thumb.webp');
+
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', `/api/albums/${albumId}/upload`);
+    xhr.withCredentials = true;
+    xhr.upload.onprogress = (e) => {
+      if (e.lengthComputable && onProgress) onProgress(e.loaded / e.total);
+    };
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        try {
+          resolve(JSON.parse(xhr.responseText));
+        } catch {
+          reject(new ApiError(xhr.status, 'Ongeldig serverantwoord.'));
+        }
+      } else {
+        reject(new ApiError(xhr.status, xhr.responseText || xhr.statusText));
+      }
+    };
+    xhr.onerror = () => reject(new ApiError(0, 'Netwerkfout tijdens upload.'));
+    xhr.send(fd);
+  });
+}
+
+/** Registreer een (batch) upload → manifest bump. Gedebouncet door de caller. */
+export function registerUpload(albumId: string): Promise<{ ok: true }> {
+  return api.post(`/api/albums/${albumId}/register`);
 }
 
 /** Bouw de volledige, deelbare ouderlink (token in de URL-hash, brief §7). */
