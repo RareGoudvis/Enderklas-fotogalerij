@@ -8,6 +8,7 @@ import { buildShareLink, deleteAlbum, listAlbums } from '../lib/albums';
 import { ApiError } from '../lib/api';
 import { CreateAlbumWizard } from './CreateAlbumWizard';
 import { GuestInviteModal } from './GuestInviteModal';
+import { PhotoManager } from './PhotoManager';
 import { ShareModal } from './ShareModal';
 import { UploadZone } from './UploadZone';
 
@@ -27,6 +28,7 @@ export function AlbumsManager({ classId }: AlbumsManagerProps) {
   const [shareTarget, setShareTarget] = useState<Album | null>(null);
   const [uploadTarget, setUploadTarget] = useState<Album | null>(null);
   const [guestTarget, setGuestTarget] = useState<Album | null>(null);
+  const [photosTarget, setPhotosTarget] = useState<Album | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -107,6 +109,12 @@ export function AlbumsManager({ classId }: AlbumsManagerProps) {
                   Upload
                 </button>
                 <button
+                  onClick={() => setPhotosTarget(album)}
+                  className="min-h-touch rounded-lg border border-black/15 px-3 py-1.5 text-sm font-medium"
+                >
+                  Foto's
+                </button>
+                <button
                   onClick={() => setShareTarget(album)}
                   className="min-h-touch rounded-lg border border-black/15 px-3 py-1.5 text-sm font-medium"
                 >
@@ -162,6 +170,17 @@ export function AlbumsManager({ classId }: AlbumsManagerProps) {
           open={true}
           onClose={() => setGuestTarget(null)}
           album={guestTarget}
+        />
+      ) : null}
+
+      {photosTarget ? (
+        <PhotoManager
+          open={true}
+          onClose={() => {
+            setPhotosTarget(null);
+            void load(); // versies/telling verversen na eventuele verwijderingen
+          }}
+          album={photosTarget}
         />
       ) : null}
     </div>

@@ -36,6 +36,11 @@ export function deleteAlbum(albumId: string): Promise<{ ok: true }> {
   return api.del(`/api/albums/${albumId}`);
 }
 
+/** Verwijder één foto (staff, consent-fix). Server dwingt canManageAlbum af. */
+export function deletePhoto(albumId: string, itemId: string): Promise<{ ok: true }> {
+  return api.del(`/api/albums/${albumId}/items/${encodeURIComponent(itemId)}`);
+}
+
 export function revokeAlbum(albumId: string): Promise<{ ok: true; token: string }> {
   return api.post(`/api/albums/${albumId}/revoke`);
 }
