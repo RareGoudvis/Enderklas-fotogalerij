@@ -70,9 +70,10 @@ het beheerpaneel, maar dat bereik je enkel na login. Daarom eenmalig offline see
 # 1) Genereer de hash + bootstrap-teachers.json (vraagt het wachtwoord interactief)
 npx tsx scripts/seed-admin.mts --user vhru --email ruben@broeders.be
 
-# 2) Zet het in de PRODUCTIE-bucket (het script print exact dit commando)
+# 2) Zet het in de PRODUCTIE-bucket. LET OP: geen --remote (dat is de default
+#    voor `r2 object put`; enkel --local mikt op de simulator).
 npx wrangler r2 object put "basl-fotogalerij/config/teachers.json" \
-  --remote --jurisdiction eu --file bootstrap-teachers.json \
+  --jurisdiction eu --file bootstrap-teachers.json \
   --content-type application/json
 
 # 3) Verwijder bootstrap-teachers.json lokaal

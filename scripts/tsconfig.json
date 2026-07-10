@@ -1,0 +1,17 @@
+{
+  // Aparte config voor losse Node-scripts (bv. seed-admin.mts). Deze draaien via
+  // `npx tsx` en maken GEEN deel uit van `npm run build`/`tsc -b`. Doel: de editor
+  // de juiste globals (process, node:*) geven en imports met .ts-extensie toestaan.
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "lib": ["ES2022", "DOM"],
+    "types": ["node"],
+    "strict": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+    "allowImportingTsExtensions": true
+  },
+  "include": ["**/*.mts"]
+}

@@ -52,10 +52,10 @@ const outfile = 'bootstrap-teachers.json';
 writeFileSync(outfile, JSON.stringify(teachers, null, 2) + '\n', 'utf8');
 
 console.log(`\n✓ ${outfile} geschreven (bevat enkel de hash, geen leesbaar wachtwoord).`);
-console.log('\nZet het nu in de PRODUCTIE-bucket (niet de preview):');
+console.log('\nZet het nu in de PRODUCTIE-bucket (geen --remote; dat is de default):');
 console.log(
   `  npx wrangler r2 object put "basl-fotogalerij/config/teachers.json" \\\n` +
-    `    --remote --jurisdiction eu --file ${outfile} \\\n` +
+    `    --jurisdiction eu --file ${outfile} \\\n` +
     `    --content-type application/json\n`,
 );
 console.log('Daarna kun je inloggen en de rest van de leerkrachten via het paneel zetten.');
