@@ -4,9 +4,10 @@
 import { useCallback, useEffect, useState } from 'react';
 import { CLASSES } from '../config/classes';
 import type { Album } from '../lib/albums';
-import { deleteAlbum, listAlbums } from '../lib/albums';
+import { buildShareLink, deleteAlbum, listAlbums } from '../lib/albums';
 import { ApiError } from '../lib/api';
 import { CreateAlbumWizard } from './CreateAlbumWizard';
+import { GuestInviteModal } from './GuestInviteModal';
 import { ShareModal } from './ShareModal';
 import { UploadZone } from './UploadZone';
 
@@ -25,6 +26,7 @@ export function AlbumsManager({ classId }: AlbumsManagerProps) {
   const [wizardOpen, setWizardOpen] = useState(false);
   const [shareTarget, setShareTarget] = useState<Album | null>(null);
   const [uploadTarget, setUploadTarget] = useState<Album | null>(null);
+  const [guestTarget, setGuestTarget] = useState<Album | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -91,7 +93,13 @@ export function AlbumsManager({ classId }: AlbumsManagerProps) {
                   {album.classes.map(classLabel).join(', ')}
                 </p>
               </div>
-              <div className="flex shrink-0 gap-2">
+              <div className="flex shrink-0 flex-wrap justify-end gap-2">
+                <button
+                  onClick={() => album.token && window.open(buildShareLink(album.token), '_blank', 'noopener')}
+                  className="min-h-touch rounded-lg border border-black/15 px-3 py-1.5 text-sm font-medium"
+                >
+                  Bekijken
+                </button>
                 <button
                   onClick={() => setUploadTarget(album)}
                   className="min-h-touch rounded-lg bg-accent px-3 py-1.5 text-sm font-medium text-accent-fg"
@@ -103,6 +111,12 @@ export function AlbumsManager({ classId }: AlbumsManagerProps) {
                   className="min-h-touch rounded-lg border border-black/15 px-3 py-1.5 text-sm font-medium"
                 >
                   Delen
+                </button>
+                <button
+                  onClick={() => setGuestTarget(album)}
+                  className="min-h-touch rounded-lg border border-black/15 px-3 py-1.5 text-sm font-medium"
+                >
+                  Gast
                 </button>
                 <button
                   onClick={() => onDelete(album)}
@@ -140,6 +154,14 @@ export function AlbumsManager({ classId }: AlbumsManagerProps) {
           onClose={() => setUploadTarget(null)}
           album={uploadTarget}
           onUploaded={() => void load()}
+        />
+      ) : null}
+
+      {guestTarget ? (
+        <GuestInviteModal
+          open={true}
+          onClose={() => setGuestTarget(null)}
+          album={guestTarget}
         />
       ) : null}
     </div>

@@ -10,10 +10,11 @@
 
 import type { Env } from './env';
 import { findAlbum } from './lib/album';
+import { resolveAlbumToken, tokenMatchesAlbum } from './lib/guest';
 import { listPhotoIds } from './lib/media';
 import { error, json } from './lib/respond';
 import { getStorage } from './storage';
-import { verifyToken } from './tokens';
+import { signToken } from './tokens';
 
 const TWO_MIN = 2 * 60 * 1000;
 const HOT = 'public, max-age=10';
@@ -29,20 +30,31 @@ export const onRequestGet: PagesFunction<Env, string, Record<string, unknown>> =
   const tok = extractToken(ctx.request);
   if (!tok) return error('Geen toegangstoken.', 401);
 
-  const parsed = await verifyToken(tok, ctx.env.SHARE_SECRET);
+  // Aanvaardt zowel de ouder-viewtoken als een gast-token (bekijken + uploaden).
+  const parsed = await resolveAlbumToken(tok, ctx.env.SHARE_SECRET, Date.now());
   if (!parsed) return error('Ongeldige link.', 401);
 
   const storage = getStorage(ctx.env);
   const found = await findAlbum(storage, parsed.albumId);
   if (!found) return error('Album niet gevonden.', 404);
-  // Revocatie: token-versie moet nog matchen (brief §7).
-  if (found.album.tokenVersion !== parsed.tokenVersion) {
+  // Revocatie: de juiste versie moet nog matchen (tokenVersion / guestVersion).
+  if (!tokenMatchesAlbum(parsed, found.album)) {
     return error('Deze link is niet meer geldig.', 401);
   }
+  const canUpload = parsed.kind === 'guest'; // gast mag ook uploaden
 
   const { album } = found;
   const ids = await listPhotoIds(ctx.env.BUCKET, album.folderId);
-  const encTok = encodeURIComponent(tok);
+
+  // BEELD-URL's dragen enkel een KIJK-token. Bij toegang via een gast-token
+  // (dat óók upload toestaat) tekenen we hier een verse view-token, zodat het
+  // krachtigere gast-token nooit in een <img>-URL / browsergeschiedenis belandt.
+  // Het uploaden zelf gebruikt het gast-token via de Authorization-header.
+  const imgTok =
+    parsed.kind === 'guest'
+      ? await signToken(album.id, album.tokenVersion, ctx.env.SHARE_SECRET)
+      : tok;
+  const encTok = encodeURIComponent(imgTok);
   const items = ids.map((id) => ({
     id,
     thumbnailUrl: `/api/img/${album.id}/thumbs/${id}.webp?tok=${encTok}&v=${album.version}`,
@@ -61,6 +73,7 @@ export const onRequestGet: PagesFunction<Env, string, Record<string, unknown>> =
         version: album.version,
         lastUploadAt: album.lastUploadAt,
         count: items.length,
+        canUpload, // true bij een geldig gast-token → frontend toont de upload-knop
       },
       items,
     },

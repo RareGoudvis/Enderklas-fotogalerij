@@ -124,17 +124,25 @@ export function Lightbox({ items, index, albumName, onClose, onIndex }: Lightbox
           }`}
         />
 
-        {/* Grote onzichtbare tik-zones links/rechts voor navigatie (desktop). */}
-        <button
-          onClick={prev}
-          aria-label="Vorige"
-          className="absolute left-0 top-0 hidden h-full w-1/4 cursor-w-resize sm:block"
-        />
-        <button
-          onClick={next}
-          aria-label="Volgende"
-          className="absolute right-0 top-0 hidden h-full w-1/4 cursor-e-resize sm:block"
-        />
+        {/* Zichtbare, halftransparante navigatiepijlen, verticaal gecentreerd. */}
+        {items.length > 1 ? (
+          <>
+            <button
+              onClick={prev}
+              aria-label="Vorige"
+              className="absolute left-2 top-1/2 flex min-h-touch min-w-touch -translate-y-1/2 items-center justify-center rounded-full bg-black/30 text-3xl leading-none text-white backdrop-blur-sm transition hover:bg-black/50"
+            >
+              ‹
+            </button>
+            <button
+              onClick={next}
+              aria-label="Volgende"
+              className="absolute right-2 top-1/2 flex min-h-touch min-w-touch -translate-y-1/2 items-center justify-center rounded-full bg-black/30 text-3xl leading-none text-white backdrop-blur-sm transition hover:bg-black/50"
+            >
+              ›
+            </button>
+          </>
+        ) : null}
       </div>
     </div>
   );

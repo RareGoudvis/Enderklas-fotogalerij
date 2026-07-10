@@ -20,13 +20,24 @@ export interface Album {
   shareLinkUrl: string | null; // null op R2 (client-zip i.p.v. server-zip)
   lastUploadAt: string | null;
   version: number; // cache-bust-teller (upload/delete bumpt dit)
-  tokenVersion: number; // revoke bumpt dit → oude sharelinks sterven
+  tokenVersion: number; // revoke bumpt dit → oude ouder-sharelinks sterven
+  /**
+   * Revoke-teller voor GAST-uploadlinks (los van tokenVersion). Bump = alle
+   * gastlinks dood, ouder-viewlinks ongemoeid. Optioneel op oude albums →
+   * behandel afwezig als 1 via guestVersionOf().
+   */
+  guestVersion?: number;
   /**
    * "Dode" backend-marker (brief §5) — bewust NIET verwijderen. Wordt in v1
    * nergens gelezen; bestaat voor de latere storage-migratie als idempotentie-
    * marker en mixed-backend-routing.
    */
   backend: string;
+}
+
+/** guestVersion met terugval op 1 voor albums van vóór deze feature. */
+export function guestVersionOf(album: Album): number {
+  return album.guestVersion ?? 1;
 }
 
 interface ManifestFile {

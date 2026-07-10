@@ -8,33 +8,35 @@
 // sessie mag er dan nog door; contributors nooit.
 
 import type { Env } from '../../env';
-import { canManageAlbum, findAlbum } from '../../lib/album';
+import { findAlbum } from '../../lib/album';
 import type { AuthData } from '../../lib/auth';
-import { requireUser } from '../../lib/guard';
-import { error, forbidden, json, notFound } from '../../lib/respond';
+import { authorizeUpload } from '../../lib/guest';
+import { error, json, notFound } from '../../lib/respond';
 import { bytesToGb, computeUsedBytes } from '../../lib/usage';
 import { getStorage } from '../../storage';
 
 export const onRequestPost: PagesFunction<Env, 'id', AuthData> = async (ctx) => {
   const albumId = ctx.params.id as string;
 
-  const gate = requireUser(ctx.data);
-  if (gate instanceof Response) return gate;
-  const user = gate;
-
   // Album ophalen via de storage-adapter (findAlbum leest manifests).
   const storage = getStorage(ctx.env);
   const found = await findAlbum(storage, albumId);
   if (!found) return notFound();
-  if (!canManageAlbum(user, found.album)) return forbidden();
 
-  // Billing-failsafe.
+  // Sessie met beheerrecht óf een geldig gast-token. Gasten mogen uploaden.
+  const auth = await authorizeUpload(ctx, found.album);
+  if (auth instanceof Response) return auth;
+
+  // Billing-failsafe. De Noodupload-bypass geldt enkel voor een admin-SESSIE
+  // met een actieve claim, nooit voor gasten of contributors.
   const capGb = Number(ctx.env.STORAGE_HARD_CAP_GB) || 9.8;
   const usedGb = bytesToGb(await computeUsedBytes(ctx.env.BUCKET));
   if (usedGb >= capGb) {
-    const now = Date.now();
     const hasBypass =
-      user.role === 'admin' && typeof user.bypassUntil === 'number' && user.bypassUntil > now;
+      auth !== 'guest' &&
+      auth.role === 'admin' &&
+      typeof auth.bypassUntil === 'number' &&
+      auth.bypassUntil > Date.now();
     if (!hasBypass) {
       return error('Opslag vol — verwittig de beheerder.', 507);
     }

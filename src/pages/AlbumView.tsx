@@ -1,26 +1,25 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { SchoolHeader } from '../components/SchoolHeader';
 import { Lightbox } from '../components/Lightbox';
+import { UploadZone } from '../components/UploadZone';
 import { RETENTION_NOTICE } from '../config/constants';
 import type { AlbumViewData } from '../lib/album-view';
 import { fetchAlbum, tokenFromHash } from '../lib/album-view';
 import { ApiError } from '../lib/api';
 
-// Publieke albumweergave (/album#tok=…) — brief §7/§8. Geen aanmelding.
+// Publieke albumweergave (/album#tok=… of #gtok=…) — brief §7/§8. Geen aanmelding.
+// Bij een gast-token (#gtok=) mag de bezoeker ook foto's toevoegen.
 export default function AlbumView() {
   const [data, setData] = useState<AlbumViewData | null>(null);
   const [state, setState] = useState<'laden' | 'klaar' | 'fout'>('laden');
   const [errMsg, setErrMsg] = useState('');
   const [lightbox, setLightbox] = useState<number | null>(null);
+  const [uploadOpen, setUploadOpen] = useState(false);
+  const [token, setToken] = useState<string | null>(null);
+  const [isGuest, setIsGuest] = useState(false);
 
-  useEffect(() => {
-    const token = tokenFromHash();
-    if (!token) {
-      setState('fout');
-      setErrMsg('Geen geldige albumlink. Gebruik de link uit de nieuwsbrief.');
-      return;
-    }
-    fetchAlbum(token)
+  const load = useCallback((tok: string) => {
+    fetchAlbum(tok)
       .then((d) => {
         setData(d);
         setState('klaar');
@@ -35,9 +34,24 @@ export default function AlbumView() {
       });
   }, []);
 
+  useEffect(() => {
+    const parsed = tokenFromHash();
+    if (!parsed) {
+      setState('fout');
+      setErrMsg('Geen geldige albumlink. Gebruik de link uit de nieuwsbrief.');
+      return;
+    }
+    setToken(parsed.token);
+    setIsGuest(parsed.kind === 'guest');
+    load(parsed.token);
+  }, [load]);
+
+  // Gast mag uploaden als de server dat bevestigt (canUpload) — server-autoritair.
+  const canUpload = isGuest && data?.album.canUpload === true;
+
   return (
     <div className="min-h-full">
-      <SchoolHeader subtitle={data?.album.name} />
+      <SchoolHeader subtitle={data?.album.name} homeLink={false} />
 
       {/* Verplichte, niet-wegklikbare retentiemelding (brief §7). */}
       <div className="border-b border-amber-200 bg-amber-50 px-4 py-2 text-center text-sm text-amber-900">
@@ -45,6 +59,15 @@ export default function AlbumView() {
       </div>
 
       <main className="mx-auto max-w-3xl px-4 py-6">
+        {canUpload ? (
+          <button
+            onClick={() => setUploadOpen(true)}
+            className="mb-5 min-h-touch w-full rounded-lg bg-accent px-4 py-2 font-medium text-accent-fg"
+          >
+            + Foto's toevoegen
+          </button>
+        ) : null}
+
         {state === 'laden' ? (
           <p className="py-12 text-center text-ink/50">Album laden…</p>
         ) : state === 'fout' ? (
@@ -56,25 +79,21 @@ export default function AlbumView() {
             Dit album is nog leeg. Kom later terug — de foto's worden nog toegevoegd.
           </p>
         ) : data ? (
-          <div className="space-y-5">
-            {/* "Download alle" bewust verborgen tot de streaming-zip getest is;
-                ouders kunnen losse foto's opslaan via de lightbox / long-press. */}
-            <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-4">
-              {data.items.map((item, i) => (
-                <button
-                  key={item.id}
-                  onClick={() => setLightbox(i)}
-                  className="aspect-square overflow-hidden rounded-md bg-black/5"
-                >
-                  <img
-                    src={item.thumbnailUrl}
-                    alt=""
-                    loading="lazy"
-                    className="h-full w-full object-cover"
-                  />
-                </button>
-              ))}
-            </div>
+          <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-4">
+            {data.items.map((item, i) => (
+              <button
+                key={item.id}
+                onClick={() => setLightbox(i)}
+                className="aspect-square overflow-hidden rounded-md bg-black/5"
+              >
+                <img
+                  src={item.thumbnailUrl}
+                  alt=""
+                  loading="lazy"
+                  className="h-full w-full object-cover"
+                />
+              </button>
+            ))}
           </div>
         ) : null}
       </main>
@@ -86,6 +105,16 @@ export default function AlbumView() {
           albumName={data.album.name}
           onClose={() => setLightbox(null)}
           onIndex={setLightbox}
+        />
+      ) : null}
+
+      {canUpload && token && data ? (
+        <UploadZone
+          open={uploadOpen}
+          onClose={() => setUploadOpen(false)}
+          album={{ id: data.album.id, name: data.album.name }}
+          authToken={token}
+          onUploaded={() => load(token)}
         />
       ) : null}
     </div>

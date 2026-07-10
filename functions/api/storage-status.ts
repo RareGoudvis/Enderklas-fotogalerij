@@ -5,19 +5,22 @@
 import { presetForUsage } from '../../src/config/compression';
 import type { Env } from './env';
 import type { AuthData } from './lib/auth';
-import { requireUser } from './lib/guard';
-import { json } from './lib/respond';
+import { validGuestToken } from './lib/guest';
+import { json, unauthorized } from './lib/respond';
 import { readSettings } from './lib/settings';
 import { bytesToGb, computeUsedBytes } from './lib/usage';
 import { getStorage } from './storage';
 
 export const onRequestGet: PagesFunction<Env, string, AuthData> = async (ctx) => {
-  const gate = requireUser(ctx.data);
-  if (gate instanceof Response) return gate;
+  const storage = getStorage(ctx.env);
+  // Staff-sessie óf een geldig gast-token (voor de gast-uploadpagina).
+  if (!ctx.data.user && !(await validGuestToken(ctx.request, ctx.env, storage))) {
+    return unauthorized();
+  }
 
   const usedBytes = await computeUsedBytes(ctx.env.BUCKET);
   const usedGb = bytesToGb(usedBytes);
-  const settings = await readSettings(getStorage(ctx.env));
+  const settings = await readSettings(storage);
   const preset = settings.pinnedPreset ?? presetForUsage(usedGb);
   const capGb = Number(ctx.env.STORAGE_HARD_CAP_GB) || 9.8;
 

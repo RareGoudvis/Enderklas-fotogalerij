@@ -7,7 +7,6 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ChangeEvent } from 'react';
 import { PRESETS } from '../config/compression';
 import type { PresetName } from '../config/compression';
-import type { Album } from '../lib/albums';
 import { getStorageStatus, registerUpload, uploadPhoto } from '../lib/albums';
 import { compressImage, isVideoFile } from '../lib/compress';
 import { ApiError } from '../lib/api';
@@ -17,7 +16,10 @@ import { Modal } from './Modal';
 interface UploadZoneProps {
   open: boolean;
   onClose: () => void;
-  album: Album;
+  /** Minimale albumvorm — werkt voor staff (Album) én gast (AlbumMeta). */
+  album: { id: string; name: string };
+  /** Gast-uploadtoken; afwezig = staff-sessie (cookie). */
+  authToken?: string;
   onUploaded: () => void;
 }
 
@@ -38,7 +40,7 @@ const REGISTER_EVERY = 10; // debounce: registreer ~1× per 10 bestanden
 let counter = 0;
 const nextId = () => `f${counter++}`;
 
-export function UploadZone({ open, onClose, album, onUploaded }: UploadZoneProps) {
+export function UploadZone({ open, onClose, album, authToken, onUploaded }: UploadZoneProps) {
   const [items, setItems] = useState<Item[]>([]);
   const [preset, setPreset] = useState<PresetName | null>(null);
   const [capReached, setCapReached] = useState(false);
@@ -48,13 +50,13 @@ export function UploadZone({ open, onClose, album, onUploaded }: UploadZoneProps
   useEffect(() => {
     if (!open) return;
     setItems([]);
-    getStorageStatus()
+    getStorageStatus(authToken)
       .then((s) => {
         setPreset(s.preset);
         setCapReached(s.capReached);
       })
       .catch(() => setPreset('hoog'));
-  }, [open]);
+  }, [open, authToken]);
 
   const update = useCallback((id: string, patch: Partial<Item>) => {
     setItems((cur) => cur.map((it) => (it.id === id ? { ...it, ...patch } : it)));
@@ -66,17 +68,17 @@ export function UploadZone({ open, onClose, album, onUploaded }: UploadZoneProps
       update(item.id, { state: 'comprimeren', error: undefined });
       const { main, thumb } = await compressImage(item.file, PRESETS[presetName]);
       update(item.id, { state: 'uploaden', progress: 0 });
-      await uploadPhoto(album.id, main, thumb, (f) => update(item.id, { progress: f }));
+      await uploadPhoto(album.id, main, thumb, (f) => update(item.id, { progress: f }), authToken);
       update(item.id, { state: 'klaar', progress: 1 });
 
       // Gedebouncede registratie.
       doneSinceRegister.current += 1;
       if (doneSinceRegister.current >= REGISTER_EVERY) {
         doneSinceRegister.current = 0;
-        await registerUpload(album.id).catch(() => {});
+        await registerUpload(album.id, authToken).catch(() => {});
       }
     },
-    [album.id, update],
+    [album.id, authToken, update],
   );
 
   const runBatch = useCallback(
@@ -93,12 +95,12 @@ export function UploadZone({ open, onClose, album, onUploaded }: UploadZoneProps
         }
       });
       // Slotregistratie zodat de laatste bestanden zeker meetellen.
-      await registerUpload(album.id).catch(() => {});
+      await registerUpload(album.id, authToken).catch(() => {});
       doneSinceRegister.current = 0;
       setRunning(false);
       onUploaded();
     },
-    [album.id, onUploaded, processItem, update],
+    [album.id, authToken, onUploaded, processItem, update],
   );
 
   function onPick(e: ChangeEvent<HTMLInputElement>) {

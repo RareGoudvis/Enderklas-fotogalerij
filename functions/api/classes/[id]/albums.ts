@@ -84,6 +84,7 @@ export const onRequestPost: PagesFunction<Env, 'id', AuthData> = async (ctx) => 
     lastUploadAt: null,
     version: 0,
     tokenVersion: 1,
+    guestVersion: 1,
     backend: ctx.env.STORAGE_BACKEND, // "dode" marker voor latere migratie (brief §5)
   };
 

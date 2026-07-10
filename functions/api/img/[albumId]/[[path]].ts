@@ -9,9 +9,9 @@
 import type { Env } from '../../env';
 import { findAlbum } from '../../lib/album';
 import { composedFilename } from '../../lib/filename';
+import { resolveAlbumToken, tokenMatchesAlbum } from '../../lib/guest';
 import { error, notFound } from '../../lib/respond';
 import { getStorage } from '../../storage';
-import { verifyToken } from '../../tokens';
 
 const BINARY_CACHE = 'public, max-age=3600'; // 1 uur (GDPR-cap)
 
@@ -31,13 +31,14 @@ export const onRequestGet: PagesFunction<
   const tok = url.searchParams.get('tok');
   if (!tok) return error('Geen toegangstoken.', 401);
 
-  const parsed = await verifyToken(tok, ctx.env.SHARE_SECRET);
+  // Aanvaardt zowel ouder-view- als gast-tokens.
+  const parsed = await resolveAlbumToken(tok, ctx.env.SHARE_SECRET, Date.now());
   if (!parsed || parsed.albumId !== albumId) return error('Ongeldige link.', 401);
 
   const storage = getStorage(ctx.env);
   const found = await findAlbum(storage, albumId);
   if (!found) return notFound();
-  if (found.album.tokenVersion !== parsed.tokenVersion) {
+  if (!tokenMatchesAlbum(parsed, found.album)) {
     return error('Deze link is niet meer geldig.', 401);
   }
 

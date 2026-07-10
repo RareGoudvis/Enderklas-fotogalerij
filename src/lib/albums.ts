@@ -49,8 +49,10 @@ export interface StorageStatus {
   capReached: boolean;
 }
 
-export function getStorageStatus(): Promise<StorageStatus> {
-  return api.get('/api/storage-status');
+// authToken (optioneel): gast-uploadtoken. Aanwezig → als Bearer meegestuurd
+// i.p.v. te leunen op de staff-sessiecookie.
+export function getStorageStatus(authToken?: string): Promise<StorageStatus> {
+  return api.get('/api/storage-status', { authToken });
 }
 
 /**
@@ -63,6 +65,7 @@ export function uploadPhoto(
   main: Blob,
   thumb: Blob,
   onProgress?: (fraction: number) => void,
+  authToken?: string,
 ): Promise<{ id: string }> {
   return new Promise((resolve, reject) => {
     const fd = new FormData();
@@ -72,6 +75,7 @@ export function uploadPhoto(
     const xhr = new XMLHttpRequest();
     xhr.open('POST', `/api/albums/${albumId}/upload`);
     xhr.withCredentials = true;
+    if (authToken) xhr.setRequestHeader('authorization', `Bearer ${authToken}`);
     xhr.upload.onprogress = (e) => {
       if (e.lengthComputable && onProgress) onProgress(e.loaded / e.total);
     };
@@ -92,8 +96,25 @@ export function uploadPhoto(
 }
 
 /** Registreer een (batch) upload → manifest bump. Gedebouncet door de caller. */
-export function registerUpload(albumId: string): Promise<{ ok: true }> {
-  return api.post(`/api/albums/${albumId}/register`);
+export function registerUpload(albumId: string, authToken?: string): Promise<{ ok: true }> {
+  return api.post(`/api/albums/${albumId}/register`, undefined, { authToken });
+}
+
+// ── Gast-uitnodigingen ──────────────────────────────────────────────────────
+export function createGuestInvite(
+  albumId: string,
+  days: number,
+): Promise<{ token: string; expiresAt: number; days: number }> {
+  return api.post(`/api/albums/${albumId}/guest-invite`, { days });
+}
+
+export function revokeGuestInvite(albumId: string): Promise<{ ok: true; guestVersion: number }> {
+  return api.post(`/api/albums/${albumId}/guest-invite/revoke`);
+}
+
+/** Gast-uploadlink: bekijken + toevoegen (aparte hash-param `gtok`). */
+export function buildGuestLink(token: string): string {
+  return `${window.location.origin}/album#gtok=${token}`;
 }
 
 /** Bouw de volledige, deelbare ouderlink (token in de URL-hash, brief §7). */

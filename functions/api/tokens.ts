@@ -62,3 +62,66 @@ export async function verifyToken(
 
   return { albumId, tokenVersion };
 }
+
+// ── Gast-tokens (album-gescopede upload-zonder-account) ──────────────────────
+//
+// Zelfde HMAC-aanpak, maar met DOMEIN-SCHEIDING: de HMAC wordt over
+// "guest:" + payload berekend, terwijl de ouder-viewtoken over de kale payload
+// tekent. Zo kan een gast-token nooit als viewtoken gelden (of omgekeerd), ook
+// al lijken de payloads op elkaar — en de bestaande ouder-links blijven geldig
+// (hun signing verandert niet).
+//
+// Payload: "g:<albumId>:<guestVersion>:<expEpochMs>"
+//  - guestVersion: revoke-teller op het album (bump = alle gastlinks dood).
+//  - exp: zelf-vervallend (geen opslag nodig).
+
+async function guestSignature(payload: string, secret: string): Promise<string> {
+  const full = b64urlEncode(await hmacSha256(`guest:${payload}`, secret));
+  return full.slice(0, SIG_CHARS);
+}
+
+/** Genereer een gast-token voor één album, geldig tot `exp` (epoch-ms). */
+export async function signGuestToken(
+  albumId: string,
+  guestVersion: number,
+  exp: number,
+  secret: string,
+): Promise<string> {
+  const payload = `g:${albumId}:${guestVersion}:${exp}`;
+  const sig = await guestSignature(payload, secret);
+  return `${b64urlEncodeStr(payload)}.${sig}`;
+}
+
+/**
+ * Verifieer een gast-token → { albumId, guestVersion, exp } of null.
+ * Checkt HMAC (met domein-scheiding), de "g:"-prefix en dat het niet vervallen
+ * is. De aanroeper checkt daarna nog `guestVersion === album.guestVersion`.
+ */
+export async function verifyGuestToken(
+  token: string,
+  secret: string,
+  now: number,
+): Promise<{ albumId: string; guestVersion: number; exp: number } | null> {
+  const dot = token.indexOf('.');
+  if (dot < 1) return null;
+  let payload: string;
+  try {
+    payload = b64urlDecodeStr(token.slice(0, dot));
+  } catch {
+    return null;
+  }
+  if (!payload.startsWith('g:')) return null;
+
+  const expected = await guestSignature(payload, secret);
+  if (!timingSafeEqualStr(token.slice(dot + 1), expected)) return null;
+
+  const parts = payload.split(':'); // ["g", albumId, guestVersion, exp]
+  if (parts.length !== 4) return null;
+  const albumId = parts[1];
+  const guestVersion = Number(parts[2]);
+  const exp = Number(parts[3]);
+  if (!albumId || !Number.isInteger(guestVersion) || !Number.isInteger(exp)) return null;
+  if (exp <= now) return null; // vervallen
+
+  return { albumId, guestVersion, exp };
+}

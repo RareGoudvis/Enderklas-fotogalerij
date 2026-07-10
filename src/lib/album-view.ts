@@ -10,7 +10,11 @@ export interface AlbumMeta {
   version: number;
   lastUploadAt: string | null;
   count: number;
+  /** True bij een geldig gast-token → de gast mag ook uploaden. */
+  canUpload?: boolean;
 }
+
+export type TokenKind = 'view' | 'guest';
 
 export interface MediaItem {
   id: string;
@@ -24,11 +28,18 @@ export interface AlbumViewData {
   items: MediaItem[];
 }
 
-/** Lees het share-token uit de URL-hash (#tok=…). */
-export function tokenFromHash(): string | null {
-  const hash = window.location.hash.replace(/^#/, '');
-  const params = new URLSearchParams(hash);
-  return params.get('tok');
+/**
+ * Lees het token uit de URL-hash. `#tok=…` = ouder-viewlink, `#gtok=…` =
+ * gast-uploadlink (bekijken + toevoegen). Beide gaan als ?tok= naar de server,
+ * die zelf het soort bepaalt; de `kind` stuurt enkel wat de UI toont.
+ */
+export function tokenFromHash(): { token: string; kind: TokenKind } | null {
+  const params = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+  const guest = params.get('gtok');
+  if (guest) return { token: guest, kind: 'guest' };
+  const view = params.get('tok');
+  if (view) return { token: view, kind: 'view' };
+  return null;
 }
 
 export async function fetchAlbum(token: string): Promise<AlbumViewData> {
