@@ -8,6 +8,11 @@ dist/
 .wrangler/
 .mf/
 
+# R2-opslagpaden — dit zijn runtime-objecten in de bucket, nooit lokale bronbestanden.
+# (src/config/ is wél broncode en blijft getrackt.)
+/config/
+/manifests/
+
 # local secrets — NEVER commit
 .dev.vars
 .env
