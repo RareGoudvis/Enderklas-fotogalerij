@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { SchoolHeader } from '../components/SchoolHeader';
-import { DownloadAll } from '../components/DownloadAll';
 import { Lightbox } from '../components/Lightbox';
 import { RETENTION_NOTICE } from '../config/constants';
 import type { AlbumViewData } from '../lib/album-view';
@@ -58,8 +57,8 @@ export default function AlbumView() {
           </p>
         ) : data ? (
           <div className="space-y-5">
-            <DownloadAll albumName={data.album.name} items={data.items} />
-
+            {/* "Download alle" bewust verborgen tot de streaming-zip getest is;
+                ouders kunnen losse foto's opslaan via de lightbox / long-press. */}
             <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-4">
               {data.items.map((item, i) => (
                 <button
@@ -84,6 +83,7 @@ export default function AlbumView() {
         <Lightbox
           items={data.items}
           index={lightbox}
+          albumName={data.album.name}
           onClose={() => setLightbox(null)}
           onIndex={setLightbox}
         />
