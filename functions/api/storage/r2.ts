@@ -46,10 +46,11 @@ export class R2Storage implements StorageAdapter {
     if (result === null) throw new ConflictError(path);
   }
 
-  createAlbumFolder(_classId: string, _albumId: string): Promise<{ folderId: string }> {
-    // R2 heeft geen echte folders; "folders" zijn key-prefixes. Wordt ingevuld
-    // bij het aanmaken van albums (Sprint 3).
-    throw new Error(NOT_YET);
+  async createAlbumFolder(classId: string, albumId: string): Promise<{ folderId: string }> {
+    // R2 heeft geen echte folders; "folders" zijn key-prefixes. We maken dus
+    // niets aan — de prefix ontstaat vanzelf bij de eerste upload. De folderId
+    // is de prefix zelf, opgeslagen in het manifest.
+    return { folderId: `albums/${classId}/${albumId}` };
   }
 
   createUploadTarget(
@@ -73,7 +74,22 @@ export class R2Storage implements StorageAdapter {
     return null;
   }
 
-  deleteAlbumFolder(_albumId: string): Promise<void> {
-    throw new Error(NOT_YET);
+  async deleteAlbumFolder(albumId: string): Promise<void> {
+    // Verwijder alle objecten waarvan de key het album-segment bevat
+    // (albums/<classId>/<albumId>/...). Doorloop de cursor voor grote albums.
+    const keys: string[] = [];
+    let cursor: string | undefined;
+    do {
+      const listing = await this.bucket.list({ prefix: 'albums/', cursor, limit: 1000 });
+      for (const obj of listing.objects) {
+        if (obj.key.split('/')[2] === albumId) keys.push(obj.key);
+      }
+      cursor = listing.truncated ? listing.cursor : undefined;
+    } while (cursor);
+
+    // R2 delete accepteert een array van keys per call.
+    for (let i = 0; i < keys.length; i += 1000) {
+      await this.bucket.delete(keys.slice(i, i + 1000));
+    }
   }
 }

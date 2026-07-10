@@ -38,3 +38,12 @@ export const GROUP_LABELS: Record<ClassGroup, string> = {
   lager: 'Lagere school',
   school: 'Schoolbreed',
 };
+
+// Platte lijst van klas-id's — gedeeld met de Pages Functions (o.a. voor het
+// aggregeren van alle manifests). classes.ts blijft de enige bron van waarheid.
+export const CLASS_IDS: readonly string[] = CLASSES.map((c) => c.id);
+
+/** Bestaat deze klas-id? */
+export function isValidClassId(id: string): boolean {
+  return CLASS_IDS.includes(id);
+}
