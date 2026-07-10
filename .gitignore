@@ -20,6 +20,9 @@ dist/
 .env.*
 !.dev.vars.example
 
+# bootstrap-seed output (bevat een wachtwoord-hash) — nooit committen
+bootstrap-teachers.json
+
 # editor / OS
 .vscode/*
 !.vscode/extensions.json
